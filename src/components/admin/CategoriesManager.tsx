@@ -84,8 +84,8 @@ export default function CategoriesManager() {
       </div>
 
       {/* Search + Add */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
@@ -97,7 +97,7 @@ export default function CategoriesManager() {
         </div>
         <button
           onClick={handleOpenAdd}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl text-sm shadow-md shadow-indigo-200 transition-all duration-200"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl text-sm shadow-md shadow-indigo-200 transition-all duration-200 shrink-0"
         >
           <Plus className="w-4 h-4" />
           Add Category
@@ -105,7 +105,7 @@ export default function CategoriesManager() {
       </div>
 
       {/* Table */}
-      {loading ? (
+      {loading && categories.length === 0 ? (
         <div className="text-center py-20">
           <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mx-auto mb-3" />
           <p className="text-slate-400 text-sm font-medium">Loading categories...</p>
@@ -122,7 +122,8 @@ export default function CategoriesManager() {
         </div>
       ) : (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto scrollbar-thin">
+            <table className="w-full text-left text-sm min-w-[640px]">
             <thead className="bg-slate-50/80 text-slate-500 border-b border-slate-100 uppercase text-[10px] tracking-wider font-bold">
               <tr>
                 <th className="px-5 py-3">Order</th>
@@ -165,6 +166,7 @@ export default function CategoriesManager() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

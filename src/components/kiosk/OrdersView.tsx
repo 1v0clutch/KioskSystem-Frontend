@@ -3,7 +3,7 @@ import { api } from '../../api/client';
 import {
   ArrowLeft, PackageOpen, Loader2, Clock, CheckCircle2,
   XCircle, ChefHat, KeyRound, Package, ChevronDown, ChevronUp,
-  Ban, Store, Truck,
+  Ban, Store, Truck, MapPin, Phone,
 } from 'lucide-react';
 import type { OrderType } from '../../pages/CustomerKiosk';
 
@@ -19,6 +19,7 @@ export default function OrdersView({ setCurrentPage }: OrdersViewProps) {
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   const lastTimestampRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
+  const checkInFlightRef = useRef(false);
 
   const loadOrders = async (showSpinner = false) => {
     if (showSpinner) setIsLoading(true);
@@ -36,7 +37,8 @@ export default function OrdersView({ setCurrentPage }: OrdersViewProps) {
   };
 
   const checkForUpdates = async () => {
-    if (!lastTimestampRef.current) return;
+    if (!lastTimestampRef.current || checkInFlightRef.current) return;
+    checkInFlightRef.current = true;
     try {
       const data = await api.get(`/orders/check?since=${lastTimestampRef.current}`);
       if (mountedRef.current && data.orders?.length > 0) {
@@ -56,6 +58,8 @@ export default function OrdersView({ setCurrentPage }: OrdersViewProps) {
       }
     } catch (error) {
       console.error('Failed to check for updates:', error);
+    } finally {
+      checkInFlightRef.current = false;
     }
   };
 
@@ -102,7 +106,7 @@ export default function OrdersView({ setCurrentPage }: OrdersViewProps) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-5">
+    <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-5 space-y-5">
       {/* Header */}
       <div className="flex justify-between items-center animate-fade-in">
         <div>
@@ -211,6 +215,21 @@ export default function OrdersView({ setCurrentPage }: OrdersViewProps) {
                           </div>
                         </div>
                         <span className="text-2xl font-mono font-black text-indigo-600 tracking-[0.15em]">{order.otp}</span>
+                      </div>
+                    )}
+
+                    {/* Delivery Details */}
+                    {order.order_type === 'delivery' && order.delivery_address && (
+                      <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 space-y-1.5">
+                        <p className="text-[10px] text-emerald-600 uppercase font-bold tracking-widest flex items-center gap-1">
+                          <MapPin className="w-3 h-3" /> Deliver To
+                        </p>
+                        <p className="text-sm font-semibold text-slate-800">{order.delivery_address}</p>
+                        {order.contact_number && (
+                          <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                            <Phone className="w-3 h-3" /> {order.contact_number}
+                          </p>
+                        )}
                       </div>
                     )}
 

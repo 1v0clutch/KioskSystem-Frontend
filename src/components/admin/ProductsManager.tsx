@@ -145,8 +145,8 @@ export default function ProductsManager() {
       </div>
 
       {/* Search + Add */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
@@ -158,7 +158,7 @@ export default function ProductsManager() {
         </div>
         <button
           onClick={handleOpenAdd}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl text-sm shadow-md shadow-indigo-200 transition-all duration-200"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl text-sm shadow-md shadow-indigo-200 transition-all duration-200 shrink-0"
         >
           <Plus className="w-4 h-4" />
           Add Product
@@ -166,7 +166,7 @@ export default function ProductsManager() {
       </div>
 
       {/* Table */}
-      {loading ? (
+      {loading && products.length === 0 ? (
         <div className="text-center py-20">
           <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mx-auto mb-3" />
           <p className="text-slate-400 text-sm font-medium">Loading products...</p>
@@ -183,8 +183,8 @@ export default function ProductsManager() {
         </div>
       ) : (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto scrollbar-thin">
+            <table className="w-full text-left text-sm min-w-[820px]">
               <thead className="bg-slate-50/80 text-slate-500 border-b border-slate-100 uppercase text-[10px] tracking-wider font-bold">
                 <tr>
                   <th className="px-5 py-3">Image</th>

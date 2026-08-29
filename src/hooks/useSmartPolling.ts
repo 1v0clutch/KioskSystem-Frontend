@@ -15,24 +15,26 @@ export function useSmartPolling<T>(
   const [error, setError] = useState<Error | null>(null);
   const mountedRef = useRef(true);
   const fetcherRef = useRef(fetcher);
+  const requestSeqRef = useRef(0);
 
   fetcherRef.current = fetcher;
 
   const fetchData = useCallback(async (showSpinner: boolean) => {
     if (!mountedRef.current) return;
+    const seq = ++requestSeqRef.current;
     if (showSpinner) setIsLoading(true);
     try {
       const result = await fetcherRef.current();
-      if (mountedRef.current) {
+      if (mountedRef.current && seq === requestSeqRef.current) {
         setData(result);
         setError(null);
       }
     } catch (err) {
-      if (mountedRef.current) {
+      if (mountedRef.current && seq === requestSeqRef.current) {
         setError(err as Error);
       }
     } finally {
-      if (mountedRef.current) {
+      if (mountedRef.current && seq === requestSeqRef.current) {
         setIsLoading(false);
       }
     }
@@ -52,5 +54,7 @@ export function useSmartPolling<T>(
     };
   }, [interval, enabled, fetchData]);
 
-  return { data, isLoading, error, refetch: () => fetchData(true) };
+  const refetch = useCallback(() => fetchData(true), [fetchData]);
+
+  return { data, isLoading, error, refetch };
 }

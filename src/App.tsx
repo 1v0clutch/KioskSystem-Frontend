@@ -1,39 +1,97 @@
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
+import Register from './pages/Register';
+import Verify from './pages/Verify';
 import CustomerKiosk from './pages/CustomerKiosk';
 import AdminDashboard from './pages/AdminDashboard';
-import { Package } from 'lucide-react';
 
-function MainContent() {
-  const { user, logout, loading } = useAuth();
+function RequireAuth({ role, children }: { role?: string; children: ReactNode }) {
+  const { user } = useAuth();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-violet-50">
-        <div className="flex flex-col items-center gap-4 animate-fade-in">
-          <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
-            <Package className="w-7 h-7 text-white" />
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce [animation-delay:-0.3s]" />
-            <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce [animation-delay:-0.15s]" />
-            <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" />
-          </div>
-          <p className="text-sm text-slate-400 font-medium">Loading system...</p>
-        </div>
-      </div>
-    );
-  }
+  if (!user) return <Navigate to="/login" replace />;
+  if (role && user.role !== role) return <Navigate to="/" replace />;
 
-  if (!user) return <Login />;
-  if (user.role === 'admin') return <AdminDashboard user={user} onLogout={logout} />;
-  return <CustomerKiosk user={user} onLogout={logout} />;
+  return <>{children}</>;
+}
+
+function GuestOnly({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+
+  if (user) return <Navigate to="/" replace />;
+
+  return <>{children}</>;
+}
+
+function HomeRedirect() {
+  const { user } = useAuth();
+
+  if (!user) return <Navigate to="/login" replace />;
+
+  return <Navigate to={user.role === 'admin' ? '/admin' : '/kiosk'} replace />;
+}
+
+function AdminPage() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  if (!user) return null;
+
+  return (
+    <AdminDashboard
+      user={user}
+      onLogout={() => {
+        logout();
+        navigate('/login');
+      }}
+    />
+  );
+}
+
+function KioskPage() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  if (!user) return null;
+
+  return (
+    <CustomerKiosk
+      user={user}
+      onLogout={() => {
+        logout();
+        navigate('/login');
+      }}
+    />
+  );
 }
 
 export default function App() {
   return (
     <AuthProvider>
-      <MainContent />
+      <Routes>
+        <Route path="/login" element={<GuestOnly><Login /></GuestOnly>} />
+        <Route path="/register" element={<GuestOnly><Register /></GuestOnly>} />
+        <Route path="/verify" element={<GuestOnly><Verify /></GuestOnly>} />
+        <Route
+          path="/admin"
+          element={
+            <RequireAuth role="admin">
+              <AdminPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/kiosk"
+          element={
+            <RequireAuth>
+              <KioskPage />
+            </RequireAuth>
+          }
+        />
+        <Route path="/" element={<HomeRedirect />} />
+        <Route path="*" element={<HomeRedirect />} />
+      </Routes>
     </AuthProvider>
   );
 }

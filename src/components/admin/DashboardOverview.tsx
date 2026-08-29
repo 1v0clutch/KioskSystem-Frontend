@@ -108,19 +108,19 @@ export default function DashboardOverview() {
               const statusStyle = getOrderIcon(order.status);
               const StatusIcon = statusStyle.icon;
               return (
-                <div key={order.id} className="px-5 py-3.5 flex justify-between items-center hover:bg-slate-50/50 transition-colors animate-fade-in-up" style={{ animationDelay: `${i * 40}ms` }}>
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 ${statusStyle.bg} rounded-lg flex items-center justify-center`}>
+                <div key={order.id} className="px-4 sm:px-5 py-3.5 flex flex-wrap gap-y-2 justify-between items-center hover:bg-slate-50/50 transition-colors animate-fade-in-up" style={{ animationDelay: `${i * 40}ms` }}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-8 h-8 ${statusStyle.bg} rounded-lg flex items-center justify-center shrink-0`}>
                       <StatusIcon className={`w-4 h-4 ${statusStyle.color}`} />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <span className="font-mono font-semibold text-slate-800 text-sm">{order.receipt_id}</span>
-                      <span className="text-[11px] text-slate-400 ml-2">
+                      <span className="hidden sm:inline text-[11px] text-slate-400 ml-2">
                         {new Date(order.created_at).toLocaleString()}
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                     <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${statusStyle.bg} ${statusStyle.color}`}>
                       {order.status}
                     </span>

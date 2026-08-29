@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { api } from '../../api/client';
 import {
   KeyRound, Loader2, ShoppingCart, ChevronRight, X,
-  Package, User, Clock, Hash, Receipt, Search, Filter,
-  PackageCheck, AlertTriangle,
+  Package, User, Clock, Hash, Receipt, Search,
+  PackageCheck, AlertTriangle, Store, Truck, MapPin, Phone,
 } from 'lucide-react';
 
 const STATUS_OPTIONS = ['All', 'Pending', 'Processing', 'Ready', 'Claimed', 'Cancelled'];
@@ -43,9 +43,32 @@ interface Order {
   otp_expiry: string;
   created_at: string;
   updated_at: string;
+  order_type?: 'pickup' | 'delivery';
+  contact_number?: string | null;
+  delivery_address?: string | null;
   customer?: { id: number; username: string; email: string };
   cashier?: { id: number; username: string };
   items: OrderItem[];
+}
+
+const ORDER_TYPE_STYLES = {
+  pickup: 'bg-indigo-50 text-indigo-600',
+  delivery: 'bg-emerald-50 text-emerald-600',
+};
+
+function OrderTypeBadge({ type, compact = false }: { type?: 'pickup' | 'delivery'; compact?: boolean }) {
+  if (!type) return null;
+  const Icon = type === 'pickup' ? Store : Truck;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-md font-bold uppercase tracking-wide ${
+        compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-[10px]'
+      } ${ORDER_TYPE_STYLES[type]}`}
+    >
+      <Icon className={compact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
+      {type === 'pickup' ? 'Pickup' : 'Delivery'}
+    </span>
+  );
 }
 
 export default function OrdersManager() {
@@ -60,6 +83,7 @@ export default function OrdersManager() {
   const [verifying, setVerifying] = useState(false);
   const lastTimestampRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
+  const checkInFlightRef = useRef(false);
 
   const loadOrders = async (showSpinner = false) => {
     if (showSpinner) setIsLoading(true);
@@ -77,7 +101,8 @@ export default function OrdersManager() {
   };
 
   const checkForUpdates = async () => {
-    if (!lastTimestampRef.current) return;
+    if (!lastTimestampRef.current || checkInFlightRef.current) return;
+    checkInFlightRef.current = true;
     try {
       const data = await api.get(`/orders/check?since=${lastTimestampRef.current}`);
       if (mountedRef.current && data.orders?.length > 0) {
@@ -97,6 +122,8 @@ export default function OrdersManager() {
       }
     } catch (error) {
       console.error('Failed to check for updates:', error);
+    } finally {
+      checkInFlightRef.current = false;
     }
   };
 
@@ -250,9 +277,9 @@ export default function OrdersManager() {
       </div>
 
       {/* Main Content: Table + Detail Panel */}
-      <div className="flex gap-5">
+      <div className="flex flex-col xl:flex-row gap-5">
         {/* Orders Table */}
-        <div className={`${selectedOrder ? 'w-1/2' : 'w-full'} transition-all duration-300`}>
+        <div className={`${selectedOrder ? 'xl:w-1/2' : 'w-full'} min-w-0 transition-all duration-300`}>
           {isLoading && orders.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-slate-100">
               <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mx-auto mb-3" />
@@ -275,11 +302,12 @@ export default function OrdersManager() {
             </div>
           ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
+              <div className="overflow-x-auto scrollbar-thin">
+                <table className="w-full text-left text-sm min-w-[720px]">
                   <thead className="bg-slate-50/80 text-slate-500 border-b border-slate-100 uppercase text-[10px] tracking-wider font-bold">
                     <tr>
                       <th className="px-5 py-3">Receipt</th>
+                      <th className="px-5 py-3">Type</th>
                       <th className="px-5 py-3">Customer</th>
                       <th className="px-5 py-3">Items</th>
                       <th className="px-5 py-3">Total</th>
@@ -307,6 +335,9 @@ export default function OrdersManager() {
                               {!isSelected && <ChevronRight className="w-3.5 h-3.5 text-slate-300" />}
                               <span className="font-mono font-semibold text-slate-800 text-xs">{o.receipt_id}</span>
                             </div>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <OrderTypeBadge type={o.order_type} compact />
                           </td>
                           <td className="px-5 py-3.5 text-xs text-slate-500">
                             {o.customer?.username || '—'}
@@ -354,8 +385,8 @@ export default function OrdersManager() {
 
         {/* Order Detail Panel */}
         {selectedOrder && (
-          <div className="w-1/2 animate-slide-up">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden sticky top-4">
+          <div className="w-full xl:w-1/2 min-w-0 animate-slide-up">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden xl:sticky xl:top-0">
               {/* Panel Header */}
               <div className="bg-slate-50 px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -373,9 +404,12 @@ export default function OrdersManager() {
               <div className="p-5 space-y-5">
                 {/* Status + Total */}
                 <div className="flex items-center justify-between">
-                  <span className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wide border ${STATUS_STYLES[selectedOrder.status] || STATUS_STYLES.Pending}`}>
-                    {selectedOrder.status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wide border ${STATUS_STYLES[selectedOrder.status] || STATUS_STYLES.Pending}`}>
+                      {selectedOrder.status}
+                    </span>
+                    <OrderTypeBadge type={selectedOrder.order_type} />
+                  </div>
                   <span className="text-xl font-bold text-emerald-600">
                     ₱{Number(selectedOrder.total).toFixed(2)}
                   </span>
@@ -390,6 +424,24 @@ export default function OrdersManager() {
                       {selectedOrder.customer?.username || '—'}
                     </span>
                   </div>
+                  {selectedOrder.order_type === 'delivery' && selectedOrder.contact_number && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <Phone className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-slate-500 font-medium">Contact</span>
+                      <span className="text-slate-800 font-semibold ml-auto font-mono">
+                        {selectedOrder.contact_number}
+                      </span>
+                    </div>
+                  )}
+                  {selectedOrder.order_type === 'delivery' && selectedOrder.delivery_address && (
+                    <div className="flex items-start gap-2 text-xs">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+                      <span className="text-slate-500 font-medium mt-0.5">Address</span>
+                      <span className="text-slate-800 font-semibold ml-auto text-right max-w-[60%] break-words">
+                        {selectedOrder.delivery_address}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-xs">
                     <Clock className="w-3.5 h-3.5 text-slate-400" />
                     <span className="text-slate-500 font-medium">Placed</span>

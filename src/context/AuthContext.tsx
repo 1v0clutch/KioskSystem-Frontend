@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { api } from '../api/client';
+import { api, revokeSession } from '../api/client';
 
 interface User {
   id: number;
@@ -11,6 +11,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => Promise<void>;
+  completeAuth: (token: string, user: User) => void;
   logout: () => void;
   loading: boolean;
 }
@@ -44,25 +45,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string) => {
     const data = await api.post('/auth/login', { username, password });
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    setUser(data.user);
+    completeAuth(data.token, data.user);
   };
 
-  const logout = async () => {
-    try {
-      await api.post('/auth/logout', {});
-    } catch {
-      // Token may already be invalid
-    } finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setUser(null);
+  const completeAuth = (token: string, userData: User) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+  };
+
+  const logout = () => {
+    // Clear local state synchronously so route guards update immediately,
+    // then revoke the server-side token in the background.
+    const token = localStorage.getItem('token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+
+    if (token) {
+      revokeSession(token);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, completeAuth, logout, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

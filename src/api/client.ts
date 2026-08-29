@@ -6,13 +6,16 @@
 //   3. Replace the fetch-based client below with Supabase client calls
 
 const API_BASE = '/api';
+const REQUEST_TIMEOUT_MS = 15000;
 
 class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  payload?: any;
+  constructor(message: string, status: number, payload?: any) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.payload = payload;
   }
 }
 
@@ -31,7 +34,20 @@ async function request(endpoint: string, options: RequestInit = {}): Promise<any
 
   const url = endpoint.startsWith('/') ? `${API_BASE}${endpoint}` : `${API_BASE}/${endpoint}`;
 
-  const response = await fetch(url, { ...options, headers });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(url, { ...options, headers, signal: controller.signal });
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err?.name === 'AbortError') {
+      throw new ApiError('Request timed out. Please check your connection and try again.', 408);
+    }
+    throw err;
+  }
+  clearTimeout(timeoutId);
 
   if (response.status === 401) {
     localStorage.removeItem('token');
@@ -42,8 +58,9 @@ async function request(endpoint: string, options: RequestInit = {}): Promise<any
 
   if (!response.ok) {
     let errorMessage = 'Request failed';
+    let errorData: any;
     try {
-      const errorData = await response.json();
+      errorData = await response.json();
       if (errorData.errors) {
         const firstField = Object.keys(errorData.errors)[0];
         errorMessage = errorData.errors[firstField][0] || errorData.message;
@@ -53,7 +70,7 @@ async function request(endpoint: string, options: RequestInit = {}): Promise<any
     } catch {
       errorMessage = `Server error (${response.status})`;
     }
-    throw new ApiError(errorMessage, response.status);
+    throw new ApiError(errorMessage, response.status, errorData);
   }
 
   if (response.status === 204) return null;
@@ -69,6 +86,19 @@ export const api = {
   delete: (endpoint: string) =>
     request(endpoint, { method: 'DELETE' }),
 };
+
+export function revokeSession(token: string): void {
+  fetch(`${API_BASE}/auth/logout`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  }).catch(() => {
+    // Fire-and-forget: token will expire server-side anyway.
+  });
+}
 
 export { ApiError };
 export const apiHelper = api;

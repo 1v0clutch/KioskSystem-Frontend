@@ -5,7 +5,7 @@ import type { OrderType } from '../../pages/CustomerKiosk';
 import {
   ArrowLeft, ShoppingCart, Minus, Plus, Trash2, CheckCircle2,
   Loader2, PackageOpen, Receipt, KeyRound, CreditCard,
-  Store, Truck,
+  Store, Truck, Phone, MapPin, AlertCircle,
 } from 'lucide-react';
 
 interface CartViewProps {
@@ -21,6 +21,27 @@ export default function CartView({ setCurrentPage, cart, setCart, orderType, onC
   const [loading, setLoading] = useState(false);
   const [receipt, setReceipt] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ contact?: string; address?: string }>({});
+
+  const validateDeliveryDetails = () => {
+    if (orderType !== 'delivery') return true;
+    const errors: { contact?: string; address?: string } = {};
+    const digitsOnly = contactNumber.replace(/[^0-9]/g, '');
+    if (!contactNumber.trim()) {
+      errors.contact = 'Contact number is required for delivery';
+    } else if (digitsOnly.length < 7 || digitsOnly.length > 15) {
+      errors.contact = 'Enter a valid contact number';
+    }
+    if (!deliveryAddress.trim()) {
+      errors.address = 'Delivery address is required';
+    } else if (deliveryAddress.trim().length < 10) {
+      errors.address = 'Please enter a complete address';
+    }
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const updateQuantity = (productId: number, delta: number) => {
     const newCart = cart.map(item => {
@@ -48,15 +69,21 @@ export default function CartView({ setCurrentPage, cart, setCart, orderType, onC
 
   const checkout = async () => {
     if (cart.length === 0) return;
-    setLoading(true);
     setErrorMsg('');
+    if (!validateDeliveryDetails()) return;
+    setLoading(true);
 
     try {
       const items = cart.map(item => ({
         product_id: item.id,
         quantity: item.quantity,
       }));
-      const response = await api.post('/orders', { items, order_type: orderType });
+      const payload: any = { items, order_type: orderType };
+      if (orderType === 'delivery') {
+        payload.contact_number = contactNumber.trim();
+        payload.delivery_address = deliveryAddress.trim();
+      }
+      const response = await api.post('/orders', payload);
       setReceipt(response);
       setCart([]);
       localStorage.removeItem('cart');
@@ -71,7 +98,7 @@ export default function CartView({ setCurrentPage, cart, setCart, orderType, onC
 
   if (receipt) {
     return (
-      <div className="max-w-lg mx-auto p-4 sm:p-6 animate-scale-in">
+      <div className="max-w-lg mx-auto w-full px-4 sm:px-6 lg:px-8 py-5 animate-scale-in">
         <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-100 text-center space-y-6">
           <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-8 h-8 text-emerald-600" />
@@ -85,6 +112,20 @@ export default function CartView({ setCurrentPage, cart, setCart, orderType, onC
             {orderType === 'pickup' ? <Store className="w-3 h-3" /> : <Truck className="w-3 h-3" />}
             {orderType === 'pickup' ? 'Pickup Order' : 'Delivery Order'}
           </div>
+
+          {orderType === 'delivery' && receipt.delivery_address && (
+            <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 text-left space-y-1.5">
+              <p className="text-[10px] text-emerald-600 uppercase font-bold tracking-widest flex items-center gap-1">
+                <MapPin className="w-3 h-3" /> Deliver To
+              </p>
+              <p className="text-sm font-semibold text-slate-800">{receipt.delivery_address}</p>
+              {receipt.contact_number && (
+                <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                  <Phone className="w-3 h-3" /> {receipt.contact_number}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 space-y-4">
             {receipt.qr_code && (
@@ -130,7 +171,7 @@ export default function CartView({ setCurrentPage, cart, setCart, orderType, onC
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-5">
+    <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-5 space-y-5">
       {/* Header */}
       <div className="flex justify-between items-center animate-fade-in">
         <div className="flex items-center gap-3">
@@ -178,7 +219,7 @@ export default function CartView({ setCurrentPage, cart, setCart, orderType, onC
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Order Type</p>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => onChangeOrderType('pickup')}
+                onClick={() => { onChangeOrderType('pickup'); setFieldErrors({}); }}
                 className={`flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold border-2 transition-all duration-200 ${
                   orderType === 'pickup'
                     ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
@@ -201,6 +242,73 @@ export default function CartView({ setCurrentPage, cart, setCart, orderType, onC
               </button>
             </div>
           </div>
+
+          {/* Delivery Details - required for delivery orders */}
+          {orderType === 'delivery' && (
+            <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4 animate-fade-in">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
+                  <Truck className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Delivery Details</h3>
+                  <p className="text-[11px] text-slate-400">Required so we can bring your order to you</p>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide">Contact Number</label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="tel"
+                    placeholder="e.g. 0917 123 4567"
+                    value={contactNumber}
+                    onChange={(e) => {
+                      setContactNumber(e.target.value);
+                      if (fieldErrors.contact) setFieldErrors(prev => ({ ...prev, contact: undefined }));
+                    }}
+                    className={`w-full pl-10 pr-4 py-2.5 border rounded-xl outline-none transition-all text-sm ${
+                      fieldErrors.contact
+                        ? 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-400'
+                        : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
+                    }`}
+                  />
+                </div>
+                {fieldErrors.contact && (
+                  <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 animate-slide-down">
+                    <AlertCircle className="w-3 h-3" /> {fieldErrors.contact}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide">Delivery Address</label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                  <textarea
+                    rows={2}
+                    placeholder="House / Unit, Street, Barangay, City, Landmark"
+                    value={deliveryAddress}
+                    onChange={(e) => {
+                      setDeliveryAddress(e.target.value);
+                      if (fieldErrors.address) setFieldErrors(prev => ({ ...prev, address: undefined }));
+                    }}
+                    className={`w-full pl-10 pr-4 py-2.5 border rounded-xl outline-none transition-all text-sm resize-none ${
+                      fieldErrors.address
+                        ? 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-400'
+                        : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
+                    }`}
+                  />
+                </div>
+                {fieldErrors.address && (
+                  <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 animate-slide-down">
+                    <AlertCircle className="w-3 h-3" /> {fieldErrors.address}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Cart Items */}
           <div className="space-y-3">

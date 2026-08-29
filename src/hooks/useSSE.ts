@@ -1,17 +1,15 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface UseSSEOptions {
   endpoint: string;
   enabled?: boolean;
-  fallbackToPolling?: boolean;
-  fallbackInterval?: number;
 }
 
 export function useSSE<T>(
   options: UseSSEOptions,
   onMessage: (data: T) => void
 ) {
-  const { endpoint, enabled = true, fallbackToPolling = true, fallbackInterval = 3000 } = options;
+  const { endpoint, enabled = true } = options;
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
