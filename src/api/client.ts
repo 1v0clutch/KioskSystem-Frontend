@@ -5,7 +5,54 @@
 //   2. Install @supabase/supabase-js
 //   3. Replace the fetch-based client below with Supabase client calls
 
-const API_BASE = '/api';
+function trimTrailingSlashes(value: string): string {
+  return value.replace(/\/+$/, '');
+}
+
+function buildApiBase(): string {
+  const explicitBase = import.meta.env.VITE_API_BASE_URL;
+  if (explicitBase) return trimTrailingSlashes(explicitBase);
+
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (apiUrl) {
+    const normalized = trimTrailingSlashes(apiUrl);
+    return normalized.endsWith('/api') ? normalized : `${normalized}/api`;
+  }
+
+  return '/api';
+}
+
+function stringifyFallback(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value === null || value === undefined) return '';
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function extractErrorMessage(errorData: any, fallback: string): string {
+  if (!errorData || typeof errorData !== 'object') {
+    return stringifyFallback(errorData) || fallback;
+  }
+
+  if (errorData.errors && typeof errorData.errors === 'object') {
+    const firstField = Object.keys(errorData.errors)[0];
+    const fieldError = errorData.errors[firstField];
+
+    if (Array.isArray(fieldError) && fieldError.length > 0) {
+      return stringifyFallback(fieldError[0]) || fallback;
+    }
+
+    return stringifyFallback(fieldError || errorData.message) || fallback;
+  }
+
+  return stringifyFallback(errorData.error || errorData.message) || fallback;
+}
+
+const API_BASE = buildApiBase();
 const REQUEST_TIMEOUT_MS = 15000;
 
 class ApiError extends Error {
@@ -32,7 +79,8 @@ async function request(endpoint: string, options: RequestInit = {}): Promise<any
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const url = endpoint.startsWith('/') ? `${API_BASE}${endpoint}` : `${API_BASE}/${endpoint}`;
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${API_BASE}${cleanEndpoint}`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -57,16 +105,11 @@ async function request(endpoint: string, options: RequestInit = {}): Promise<any
   }
 
   if (!response.ok) {
-    let errorMessage = 'Request failed';
+    let errorMessage = `Server error (${response.status})`;
     let errorData: any;
     try {
       errorData = await response.json();
-      if (errorData.errors) {
-        const firstField = Object.keys(errorData.errors)[0];
-        errorMessage = errorData.errors[firstField][0] || errorData.message;
-      } else {
-        errorMessage = errorData.error || errorData.message || errorMessage;
-      }
+      errorMessage = extractErrorMessage(errorData, errorMessage);
     } catch {
       errorMessage = `Server error (${response.status})`;
     }
