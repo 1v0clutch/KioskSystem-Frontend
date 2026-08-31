@@ -10,8 +10,9 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<any>;
   completeAuth: (token: string, user: User) => void;
+  updateUser: (user: User) => void;
   logout: () => void;
   loading: boolean;
 }
@@ -45,11 +46,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string) => {
     const data = await api.post('/auth/login', { username, password });
+    if (data.requires_admin_otp) {
+      return data;
+    }
+
     completeAuth(data.token, data.user);
+    return data;
   };
 
   const completeAuth = (token: string, userData: User) => {
     localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+  };
+
+  const updateUser = (userData: User) => {
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
   };
@@ -68,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, completeAuth, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, completeAuth, updateUser, logout, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

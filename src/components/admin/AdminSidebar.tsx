@@ -1,6 +1,7 @@
 import {
   LayoutDashboard, Package, Tags, ShoppingCart, BarChart3,
   LogOut, Shield,
+  UserRound,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -8,11 +9,12 @@ interface AdminSidebarProps {
   setCurrentPage: (page: 'dashboard' | 'products' | 'categories' | 'orders' | 'reports') => void;
   username?: string;
   onLogout: () => void;
+  onProfile: () => void;
   mobileOpen?: boolean;
   onCloseMobile?: () => void;
 }
 
-export default function AdminSidebar({ currentPage, setCurrentPage, username, onLogout, mobileOpen = false, onCloseMobile }: AdminSidebarProps) {
+export default function AdminSidebar({ currentPage, setCurrentPage, username, onLogout, onProfile, mobileOpen = false, onCloseMobile }: AdminSidebarProps) {
   const navItems = [
     { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'products' as const, label: 'Products', icon: Package },
@@ -75,7 +77,17 @@ export default function AdminSidebar({ currentPage, setCurrentPage, username, on
         </nav>
 
         {/* Logout */}
-        <div className="p-3 border-t border-slate-800/80">
+        <div className="p-3 border-t border-slate-800/80 space-y-2">
+          <button
+            onClick={() => {
+              onProfile();
+              onCloseMobile?.();
+            }}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/80 hover:text-slate-200 transition-all duration-200"
+          >
+            <UserRound className="w-4 h-4" />
+            <span>Profile</span>
+          </button>
           <button
             onClick={onLogout}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-red-950/40 hover:text-red-400 transition-all duration-200"

@@ -20,10 +20,13 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await login(username, password);
+      const data = await login(username, password);
+      if (data?.requires_admin_otp) {
+        navigate('/verify', { state: { email: data.email, purpose: 'admin_login' }, replace: true });
+      }
     } catch (err: any) {
       if (err?.status === 403 && err?.payload?.needs_verification) {
-        navigate('/verify', { state: { email: err.payload.email || '' }, replace: true });
+        navigate('/verify', { state: { email: err.payload.email || '', purpose: 'registration' }, replace: true });
         return;
       }
       setError(err.message || 'Login failed. Please check your credentials.');
@@ -103,6 +106,12 @@ export default function Login() {
       </button>
 
       <p className="text-center text-sm text-slate-500 pt-2 border-t border-slate-200/60">
+        <Link to="/forgot-password" className="font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">
+          Forgot password?
+        </Link>
+      </p>
+
+      <p className="text-center text-sm text-slate-500">
         New here?{' '}
         <Link to="/register" className="font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">
           Create an account

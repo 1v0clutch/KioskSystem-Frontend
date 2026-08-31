@@ -1,13 +1,14 @@
-import { Package, LogOut, Store, Truck } from 'lucide-react';
+import { Package, LogOut, Store, Truck, UserRound } from 'lucide-react';
 import type { OrderType } from '../../pages/CustomerKiosk';
 
 interface KioskNavbarProps {
   username?: string;
   onLogout: () => void;
+  onProfile: () => void;
   orderType: OrderType;
 }
 
-export default function KioskNavbar({ username, onLogout, orderType }: KioskNavbarProps) {
+export default function KioskNavbar({ username, onLogout, onProfile, orderType }: KioskNavbarProps) {
   return (
     <nav className="glass-strong border-b border-slate-200/60 shrink-0 z-40">
       <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
@@ -41,6 +42,13 @@ export default function KioskNavbar({ username, onLogout, orderType }: KioskNavb
               {username || 'Customer'}
             </span>
           </div>
+          <button
+            onClick={onProfile}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all duration-200 font-medium"
+          >
+            <UserRound className="w-4 h-4" />
+            <span className="hidden sm:inline">Profile</span>
+          </button>
           <button
             onClick={onLogout}
             className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 font-medium"

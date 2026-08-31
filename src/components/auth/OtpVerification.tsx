@@ -4,6 +4,7 @@ import { Loader2, AlertCircle, MailCheck, RefreshCw } from 'lucide-react';
 
 interface OtpVerificationProps {
   email: string;
+  purpose?: 'registration' | 'admin_login' | 'email_change';
   onVerified: (token: string, user: { id: number; username: string; email: string; role: string }) => void;
 }
 
@@ -16,7 +17,7 @@ function maskEmail(email: string): string {
   return `${name[0]}${'*'.repeat(Math.min(name.length - 1, 5))}${name.slice(-1)}@${domain}`;
 }
 
-export default function OtpVerification({ email, onVerified }: OtpVerificationProps) {
+export default function OtpVerification({ email, purpose = 'registration', onVerified }: OtpVerificationProps) {
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));
   const [error, setError] = useState('');
   const [verifying, setVerifying] = useState(false);
@@ -44,7 +45,12 @@ export default function OtpVerification({ email, onVerified }: OtpVerificationPr
     setError('');
     setVerifying(true);
     try {
-      const data = await api.post('/auth/verify-registration', { email, code });
+      const endpoint = purpose === 'admin_login'
+        ? '/auth/verify-admin-login'
+        : purpose === 'email_change'
+          ? '/auth/verify-email-change'
+          : '/auth/verify-registration';
+      const data = await api.post(endpoint, { email, code });
       setSuccess(true);
       setTimeout(() => onVerified(data.token, data.user), 700);
     } catch (err: any) {
@@ -112,7 +118,7 @@ export default function OtpVerification({ email, onVerified }: OtpVerificationPr
     setResending(true);
     setError('');
     try {
-      await api.post('/auth/resend-otp', { email });
+      await api.post('/auth/resend-otp', { email, purpose });
       setCooldown(RESEND_SECONDS);
       setDigits(Array(CODE_LENGTH).fill(''));
       inputsRef.current[0]?.focus();
@@ -130,7 +136,9 @@ export default function OtpVerification({ email, onVerified }: OtpVerificationPr
           <div className="w-14 h-14 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <MailCheck className="w-7 h-7 text-indigo-600" />
           </div>
-          <h2 className="text-xl font-bold text-slate-900">Verify your email</h2>
+          <h2 className="text-xl font-bold text-slate-900">
+            {purpose === 'admin_login' ? 'Verify admin login' : 'Verify your email'}
+          </h2>
           <p className="text-sm text-slate-500 mt-2">
             We sent a 6-digit code to
             <br />

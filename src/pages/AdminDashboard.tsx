@@ -10,9 +10,10 @@ import ReportsOverview from '../components/admin/ReportsOverview';
 interface AdminDashboardProps {
   user: any;
   onLogout: () => void;
+  onProfile: () => void;
 }
 
-export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
+export default function AdminDashboard({ user, onLogout, onProfile }: AdminDashboardProps) {
   const [currentPage, setCurrentPage] = useState<'dashboard' | 'products' | 'categories' | 'orders' | 'reports'>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -23,6 +24,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         setCurrentPage={setCurrentPage}
         username={user?.username}
         onLogout={onLogout}
+        onProfile={onProfile}
         mobileOpen={sidebarOpen}
         onCloseMobile={() => setSidebarOpen(false)}
       />

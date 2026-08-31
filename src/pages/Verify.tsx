@@ -8,7 +8,9 @@ export default function Verify() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const email = (location.state as { email?: string } | null)?.email;
+  const state = location.state as { email?: string; purpose?: 'registration' | 'admin_login' | 'email_change' } | null;
+  const email = state?.email;
+  const purpose = state?.purpose || 'registration';
 
   if (!email) {
     return <Navigate to="/login" replace />;
@@ -23,6 +25,7 @@ export default function Verify() {
 
       <OtpVerification
         email={email}
+        purpose={purpose}
         onVerified={(token, user) => {
           completeAuth(token, user);
           navigate('/', { replace: true });

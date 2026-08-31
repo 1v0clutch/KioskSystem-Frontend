@@ -4,6 +4,9 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Verify from './pages/Verify';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import Profile from './pages/Profile';
 import CustomerKiosk from './pages/CustomerKiosk';
 import AdminDashboard from './pages/AdminDashboard';
 
@@ -45,6 +48,7 @@ function AdminPage() {
         logout();
         navigate('/login');
       }}
+      onProfile={() => navigate('/profile')}
     />
   );
 }
@@ -62,6 +66,7 @@ function KioskPage() {
         logout();
         navigate('/login');
       }}
+      onProfile={() => navigate('/profile')}
     />
   );
 }
@@ -72,7 +77,17 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<GuestOnly><Login /></GuestOnly>} />
         <Route path="/register" element={<GuestOnly><Register /></GuestOnly>} />
+        <Route path="/forgot-password" element={<GuestOnly><ForgotPassword /></GuestOnly>} />
+        <Route path="/reset-password" element={<GuestOnly><ResetPassword /></GuestOnly>} />
         <Route path="/verify" element={<GuestOnly><Verify /></GuestOnly>} />
+        <Route
+          path="/profile"
+          element={
+            <RequireAuth>
+              <Profile />
+            </RequireAuth>
+          }
+        />
         <Route
           path="/admin"
           element={

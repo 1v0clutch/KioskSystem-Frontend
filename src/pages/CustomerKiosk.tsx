@@ -12,11 +12,12 @@ import OrderTypeSelector from '../components/kiosk/OrderTypeSelector';
 interface CustomerKioskProps {
   user: any;
   onLogout: () => void;
+  onProfile: () => void;
 }
 
 export type OrderType = 'pickup' | 'delivery';
 
-export default function CustomerKiosk({ user, onLogout }: CustomerKioskProps) {
+export default function CustomerKiosk({ user, onLogout, onProfile }: CustomerKioskProps) {
   const [currentPage, setCurrentPage] = useState<'shop' | 'cart' | 'orders'>('shop');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orderType, setOrderType] = useState<OrderType | null>(null);
@@ -99,7 +100,7 @@ export default function CustomerKiosk({ user, onLogout }: CustomerKioskProps) {
 
       {/* Main column */}
       <div className="flex-1 flex flex-col min-w-0">
-        <KioskNavbar username={user?.username} onLogout={onLogout} orderType={orderType} />
+        <KioskNavbar username={user?.username} onLogout={onLogout} onProfile={onProfile} orderType={orderType} />
 
         {/* Category chips - mobile */}
         <MobileCategoryChips
