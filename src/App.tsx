@@ -9,6 +9,7 @@ import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
 import CustomerKiosk from './pages/CustomerKiosk';
 import AdminDashboard from './pages/AdminDashboard';
+import { ToastProvider } from './components/ui/ToastProvider';
 
 function RequireAuth({ role, children }: { role?: string; children: ReactNode }) {
   const { user } = useAuth();
@@ -74,39 +75,41 @@ function KioskPage() {
 export default function App() {
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/login" element={<GuestOnly><Login /></GuestOnly>} />
-        <Route path="/register" element={<GuestOnly><Register /></GuestOnly>} />
-        <Route path="/forgot-password" element={<GuestOnly><ForgotPassword /></GuestOnly>} />
-        <Route path="/reset-password" element={<GuestOnly><ResetPassword /></GuestOnly>} />
-        <Route path="/verify" element={<GuestOnly><Verify /></GuestOnly>} />
-        <Route
-          path="/profile"
-          element={
-            <RequireAuth>
-              <Profile />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <RequireAuth role="admin">
-              <AdminPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/kiosk"
-          element={
-            <RequireAuth>
-              <KioskPage />
-            </RequireAuth>
-          }
-        />
-        <Route path="/" element={<HomeRedirect />} />
-        <Route path="*" element={<HomeRedirect />} />
-      </Routes>
+      <ToastProvider>
+        <Routes>
+          <Route path="/login" element={<GuestOnly><Login /></GuestOnly>} />
+          <Route path="/register" element={<GuestOnly><Register /></GuestOnly>} />
+          <Route path="/forgot-password" element={<GuestOnly><ForgotPassword /></GuestOnly>} />
+          <Route path="/reset-password" element={<GuestOnly><ResetPassword /></GuestOnly>} />
+          <Route path="/verify" element={<GuestOnly><Verify /></GuestOnly>} />
+          <Route
+            path="/profile"
+            element={
+              <RequireAuth>
+                <Profile />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <RequireAuth role="admin">
+                <AdminPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/kiosk"
+            element={
+              <RequireAuth>
+                <KioskPage />
+              </RequireAuth>
+            }
+          />
+          <Route path="/" element={<HomeRedirect />} />
+          <Route path="*" element={<HomeRedirect />} />
+        </Routes>
+      </ToastProvider>
     </AuthProvider>
   );
 }

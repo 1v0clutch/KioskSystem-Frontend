@@ -39,7 +39,7 @@ export default function OrderTypeSelector({ onSelect }: OrderTypeSelectorProps) 
             </div>
             <div className="text-center">
               <h3 className="text-lg font-bold text-slate-900 mb-1">Delivery</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Have your order delivered to your address</p>
+              <p className="text-xs text-slate-400 leading-relaxed">PHP 10 fee for 5 items or PHP 100+ product subtotal</p>
             </div>
           </button>
         </div>

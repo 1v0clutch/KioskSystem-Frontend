@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { api } from '../../api/client';
 import type { CartItem } from './ShopView';
 import type { OrderType } from '../../pages/CustomerKiosk';
+import QuantityStepper from '../ui/QuantityStepper';
+import { useToast } from '../ui/ToastProvider';
 import {
-  ArrowLeft, ShoppingCart, Minus, Plus, Trash2, CheckCircle2,
+  ArrowLeft, ShoppingCart, Trash2, CheckCircle2,
   Loader2, PackageOpen, Receipt, KeyRound, CreditCard,
   Store, Truck, Phone, MapPin, AlertCircle,
 } from 'lucide-react';
@@ -17,7 +19,12 @@ interface CartViewProps {
   onResetSession: () => void;
 }
 
+const DELIVERY_FEE = 10;
+const DELIVERY_MINIMUM_SUBTOTAL = 100;
+const DELIVERY_MINIMUM_ITEM_COUNT = 5;
+
 export default function CartView({ setCurrentPage, cart, setCart, orderType, onChangeOrderType, onResetSession }: CartViewProps) {
+  const { notify } = useToast();
   const [loading, setLoading] = useState(false);
   const [receipt, setReceipt] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState('');
@@ -27,6 +34,18 @@ export default function CartView({ setCurrentPage, cart, setCart, orderType, onC
 
   const validateDeliveryDetails = () => {
     if (orderType !== 'delivery') return true;
+    const subtotal = cart.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0);
+    const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+    if (itemCount < DELIVERY_MINIMUM_ITEM_COUNT && subtotal < DELIVERY_MINIMUM_SUBTOTAL) {
+      notify({
+        type: 'warning',
+        title: 'Delivery minimum not met',
+        message: `Delivery needs at least ${DELIVERY_MINIMUM_ITEM_COUNT} items or PHP ${DELIVERY_MINIMUM_SUBTOTAL.toFixed(2)} in products before the PHP ${DELIVERY_FEE.toFixed(2)} fee.`,
+      });
+      return false;
+    }
+
     const errors: { contact?: string; address?: string } = {};
     const digitsOnly = contactNumber.replace(/[^0-9]/g, '');
     if (!contactNumber.trim()) {
@@ -49,7 +68,11 @@ export default function CartView({ setCurrentPage, cart, setCart, orderType, onC
         const newQty = item.quantity + delta;
         if (newQty <= 0) return null;
         if (newQty > item.stock) {
-          alert('Cannot exceed available stock');
+          notify({
+            type: 'warning',
+            title: 'Stock limit reached',
+            message: `${item.name} only has ${item.stock} available.`,
+          });
           return item;
         }
         return { ...item, quantity: newQty };
@@ -94,7 +117,13 @@ export default function CartView({ setCurrentPage, cart, setCart, orderType, onC
     }
   };
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = cart.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0);
+  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const deliveryFee = orderType === 'delivery' ? DELIVERY_FEE : 0;
+  const total = subtotal + deliveryFee;
+  const deliveryMinimumMet = orderType !== 'delivery'
+    || itemCount >= DELIVERY_MINIMUM_ITEM_COUNT
+    || subtotal >= DELIVERY_MINIMUM_SUBTOTAL;
 
   if (receipt) {
     return (
@@ -149,6 +178,18 @@ export default function CartView({ setCurrentPage, cart, setCart, orderType, onC
               </span>
               <span className="text-xl font-bold text-emerald-600">₱{Number(receipt.total).toFixed(2)}</span>
             </div>
+            {orderType === 'delivery' && (
+              <div className="rounded-xl bg-white p-3 text-left text-xs text-slate-500">
+                <div className="flex justify-between">
+                  <span>Products</span>
+                  <span className="font-semibold text-slate-700">₱{Number(receipt.subtotal || 0).toFixed(2)}</span>
+                </div>
+                <div className="mt-1 flex justify-between">
+                  <span>Delivery fee</span>
+                  <span className="font-semibold text-slate-700">₱{Number(receipt.delivery_fee || 0).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3">
@@ -252,9 +293,17 @@ export default function CartView({ setCurrentPage, cart, setCart, orderType, onC
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm">Delivery Details</h3>
-                  <p className="text-[11px] text-slate-400">Required so we can bring your order to you</p>
+                  <p className="text-[11px] text-slate-400">
+                    Requires 5 items or PHP 100.00 product subtotal, plus PHP 10.00 delivery fee
+                  </p>
                 </div>
               </div>
+
+              {!deliveryMinimumMet && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-medium leading-5 text-amber-700 animate-slide-down">
+                  Delivery is available once your cart has at least {DELIVERY_MINIMUM_ITEM_COUNT} items or PHP {DELIVERY_MINIMUM_SUBTOTAL.toFixed(2)} in products.
+                </div>
+              )}
 
               <div className="space-y-1">
                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide">Contact Number</label>
@@ -322,22 +371,18 @@ export default function CartView({ setCurrentPage, cart, setCart, orderType, onC
                   <h3 className="font-semibold text-slate-900 text-sm truncate">{item.name}</h3>
                   <p className="text-slate-400 text-xs mt-0.5">₱{Number(item.price).toFixed(2)} each</p>
                 </div>
-                <div className="flex items-center gap-4 w-full sm:w-auto justify-between">
-                  <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
-                    <button
-                      onClick={() => updateQuantity(item.id, -1)}
-                      className="px-3 py-1.5 hover:bg-slate-200 text-slate-600 transition-colors"
-                    >
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
-                    <span className="px-3 py-1.5 font-bold text-sm text-slate-800 min-w-[2rem] text-center">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.id, 1)}
-                      className="px-3 py-1.5 hover:bg-slate-200 text-slate-600 transition-colors"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  <div className="flex items-center gap-4 w-full sm:w-auto justify-between">
+                  <QuantityStepper
+                    value={item.quantity}
+                    min={1}
+                    max={item.stock}
+                    onChange={(nextQuantity) => updateQuantity(item.id, nextQuantity - item.quantity)}
+                    onLimit={() => notify({
+                      type: 'warning',
+                      title: 'Stock limit reached',
+                      message: `${item.name} only has ${item.stock} available.`,
+                    })}
+                  />
                   <span className="font-bold text-sm text-slate-900 min-w-[5rem] text-right">
                     ₱{(Number(item.price) * item.quantity).toFixed(2)}
                   </span>
@@ -354,11 +399,23 @@ export default function CartView({ setCurrentPage, cart, setCart, orderType, onC
 
           {/* Summary */}
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4 animate-fade-in">
-            <div className="flex justify-between items-center">
-              <span className="text-base font-medium text-slate-500">Total</span>
-              <span className="text-2xl font-bold text-emerald-600">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center text-sm">
+                <span className="font-medium text-slate-500">Products</span>
+                <span className="font-bold text-slate-900">₱{Number(subtotal).toFixed(2)}</span>
+              </div>
+              {orderType === 'delivery' && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="font-medium text-slate-500">Delivery fee</span>
+                  <span className="font-bold text-slate-900">₱{Number(deliveryFee).toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center border-t border-slate-100 pt-3">
+                <span className="text-base font-medium text-slate-500">Total</span>
+                <span className="text-2xl font-bold text-emerald-600">
                 ₱{Number(total).toFixed(2)}
-              </span>
+                </span>
+              </div>
             </div>
             <button
               onClick={checkout}
